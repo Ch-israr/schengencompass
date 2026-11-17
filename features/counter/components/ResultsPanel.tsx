@@ -38,6 +38,18 @@ export function ResultsPanel({
       ? plannedDays - result.maxStayFromEntry
       : 0;
   const noDaysLeft = result.daysRemaining === 0 && result.maxStayFromEntry === 0;
+  // The re-entry date is shown whenever no days remain and one was found —
+  // not only when maxStay is 0. When the entry day itself is already
+  // counted (maxStay 1), the user still has 0 days left and still needs
+  // to know when they can re-enter.
+  const reentryFound =
+    result.earliestReentry.status === "found"
+      ? result.earliestReentry
+      : null;
+  const showReentry = result.daysRemaining === 0 && reentryFound !== null;
+  const reentryNotFound =
+    result.daysRemaining === 0 &&
+    result.earliestReentry.status === "not-found";
 
   return (
     <section
@@ -94,15 +106,26 @@ export function ResultsPanel({
         </Alert>
       ) : null}
 
-      {noDaysLeft && result.earliestReentry ? (
+      {showReentry && reentryFound ? (
         <Alert tone="warning" title="No days left right now">
           <p>
             You have used all 90 days in the current 180-day window. The
             earliest you could re-enter is{" "}
-            <strong className="tnum">{result.earliestReentry.date}</strong>,
-            when {result.earliestReentry.daysAvailable}{" "}
-            {result.earliestReentry.daysAvailable === 1 ? "day" : "days"} will
-            be available.
+            <strong className="tnum">{reentryFound.date}</strong>, when{" "}
+            {reentryFound.daysAvailable}{" "}
+            {reentryFound.daysAvailable === 1 ? "day" : "days"} will be
+            available.
+          </p>
+        </Alert>
+      ) : null}
+
+      {reentryNotFound ? (
+        <Alert tone="warning" title="No re-entry date found">
+          <p>
+            You have used all 90 days in the current 180-day window, and
+            your trips cover such a long period that no re-entry date could
+            be found in the next 5 years. Check the trips you entered, or
+            plan a longer break outside the Schengen Area.
           </p>
         </Alert>
       ) : null}
