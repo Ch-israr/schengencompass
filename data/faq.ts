@@ -4,12 +4,15 @@
  * - 29 Schengen states; Ireland, Cyprus and the UK outside.
  * - EES operational since 10 Apr 2026; ETIAS not live, no start date.
  * - Trips never leave the browser.
- * This data file feeds both the visible FAQ and the FAQPage JSON-LD —
- * structured data must only repeat what is visibly on the page.
+ * An entry may carry one outbound `link`, rendered after the answer text.
  */
+import { EC_CALCULATOR_URL } from "@/lib/site";
+
 export interface FaqEntry {
   question: string;
   answer: string;
+  /** Optional outbound link, rendered after the answer (new tab). */
+  link?: { href: string; label: string };
 }
 
 export const COUNTER_FAQ: FaqEntry[] = [
@@ -37,6 +40,10 @@ export const COUNTER_FAQ: FaqEntry[] = [
     question: "Where can I verify the 90/180 rule?",
     answer:
       "The European Commission publishes the official Schengen short-stay rules and an official visa calculator. Use them for final decisions — this site is a planning aid, not legal advice.",
+    link: {
+      href: EC_CALCULATOR_URL,
+      label: "European Commission's official Schengen calculator",
+    },
   },
   {
     question: "Are my trip dates sent to a server?",
