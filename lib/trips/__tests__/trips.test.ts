@@ -9,6 +9,7 @@ import {
 import {
   findOverlaps,
   normaliseTrip,
+  validatePlannedEntry,
   validateTrip,
   validateTripList,
 } from "../validate";
@@ -35,6 +36,40 @@ describe("validateTrip", () => {
     expect(validateTrip("2027-02-29", "2027-03-01").errors).toHaveLength(1);
     expect(validateTrip("2026-01-01", "banana").errors).toHaveLength(1);
     expect(validateTrip("banana", "also-bad").errors).toHaveLength(2);
+  });
+
+  it("attributes each error to its field (F-03)", () => {
+    const reversed = validateTrip("2026-03-10", "2026-03-01");
+    expect(reversed.fields.exit).toEqual([
+      "Exit date must be on or after the entry date.",
+    ]);
+    expect(reversed.fields.entry).toEqual([]);
+    const badEntry = validateTrip("2027-02-29", "2027-03-01");
+    expect(badEntry.fields.entry).toEqual([
+      "Entry date is not a valid date.",
+    ]);
+    expect(badEntry.fields.exit).toEqual([]);
+    const valid = validateTrip("2026-01-01", "2026-01-30");
+    expect(valid.fields).toEqual({ entry: [], exit: [] });
+  });
+});
+
+describe("validatePlannedEntry (F-02)", () => {
+  it("rejects a past entry date", () => {
+    expect(validatePlannedEntry("2026-11-15", "2026-11-16")).toBe(
+      "Planned entry date must be today or later.",
+    );
+  });
+
+  it("accepts today and future dates", () => {
+    expect(validatePlannedEntry("2026-11-16", "2026-11-16")).toBeNull();
+    expect(validatePlannedEntry("2026-12-01", "2026-11-16")).toBeNull();
+  });
+
+  it("rejects an unparseable entry date", () => {
+    expect(validatePlannedEntry("banana", "2026-11-16")).toBe(
+      "Planned entry date is not a valid date.",
+    );
   });
 });
 
@@ -93,6 +128,37 @@ describe("serialiseTrips / parseTrips round-trip", () => {
   it("round-trips a label containing spaces and special characters", () => {
     const trips = [t("2026-01-01", "2026-01-05", "New York & Paris")];
     expect(parseTrips(serialiseTrips(trips))).toEqual(trips);
+  });
+
+  it("round-trips a label containing underscores (F-22)", () => {
+    // Regression test: "_" is the segment separator, and
+    // encodeURIComponent does not escape it — an unescaped "A_B" used to
+    // split into extra segments and the trip was silently dropped.
+    const trips = [t("2026-01-01", "2026-01-05", "A_B")];
+    expect(serialiseTrips(trips)).toBe("2026-01-01_2026-01-05_A%5FB");
+    expect(parseTrips(serialiseTrips(trips))).toEqual(trips);
+    const many = [
+      t("2026-01-01", "2026-01-05", "a_b_c"),
+      t("2026-02-01", "2026-02-05", "__leading"),
+    ];
+    expect(parseTrips(serialiseTrips(many))).toEqual(many);
+  });
+
+  it("round-trips labels with spaces, commas, & and unicode (F-22)", () => {
+    const trips = [
+      t("2026-01-01", "2026-01-05", "São Paulo, café & friends"),
+      t("2026-02-01", "2026-02-05", "東京 — 2026"),
+    ];
+    expect(parseTrips(serialiseTrips(trips))).toEqual(trips);
+  });
+
+  it("still parses old share URLs without labels (backward compatibility)", () => {
+    expect(parseTrips("2026-01-01_2026-01-30,2026-03-01_2026-03-05")).toEqual(
+      [t("2026-01-01", "2026-01-30"), t("2026-03-01", "2026-03-05")],
+    );
+    expect(parseTrips("2026-01-01_2026-01-30_Lisbon")).toEqual([
+      t("2026-01-01", "2026-01-30", "Lisbon"),
+    ]);
   });
 
   it("drops malformed segments instead of throwing", () => {
