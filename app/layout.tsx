@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { SITE_URL } from "@/lib/site";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://schengencompass.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Schengen 90/180 Day Calculator — SchengenCompass",
     template: "%s — SchengenCompass",
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: "SchengenCompass",
     type: "website",
+    url: SITE_URL,
     images: [
       {
         url: "/og-default.png",
