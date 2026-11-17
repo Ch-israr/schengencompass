@@ -13,27 +13,59 @@ export interface TripValidation {
   errors: string[];
   /** Non-blocking notes, e.g. overlaps. */
   warnings: string[];
+  /**
+   * The same errors attributed to the field they belong to, so the UI can
+   * mark exactly the offending input (aria-invalid) and associate each
+   * message with its field (aria-describedby). Kept in sync with `errors`.
+   */
+  fields: { entry: string[]; exit: string[] };
 }
 
 /** Validate one trip (entry/exit strings as typed by the user). */
 export function validateTrip(entry: string, exit: string): TripValidation {
   const errors: string[] = [];
+  const fields: { entry: string[]; exit: string[] } = { entry: [], exit: [] };
   let entryDay: number | null = null;
   let exitDay: number | null = null;
   try {
     entryDay = toDayNumber(entry);
   } catch {
-    errors.push("Entry date is not a valid date.");
+    const message = "Entry date is not a valid date.";
+    errors.push(message);
+    fields.entry.push(message);
   }
   try {
     exitDay = toDayNumber(exit);
   } catch {
-    errors.push("Exit date is not a valid date.");
+    const message = "Exit date is not a valid date.";
+    errors.push(message);
+    fields.exit.push(message);
   }
   if (entryDay !== null && exitDay !== null && exitDay < entryDay) {
-    errors.push("Exit date must be on or after the entry date.");
+    const message = "Exit date must be on or after the entry date.";
+    errors.push(message);
+    fields.exit.push(message);
   }
-  return { errors, warnings: [] };
+  return { errors, warnings: [], fields };
+}
+
+/**
+ * Validate a planned entry date against `today` (a local `YYYY-MM-DD`).
+ * Returns the error message, or null when the entry is acceptable.
+ * The planned entry must be a real date on or after today.
+ */
+export function validatePlannedEntry(
+  entry: string,
+  today: string,
+): string | null {
+  try {
+    if (toDayNumber(entry) < toDayNumber(today)) {
+      return "Planned entry date must be today or later.";
+    }
+    return null;
+  } catch {
+    return "Planned entry date is not a valid date.";
+  }
 }
 
 /** Pairs of trip indexes (i < j) whose date ranges overlap. Adjacent trips (exit one day, entry the next) do not overlap. */
@@ -72,7 +104,8 @@ export function validateTripList(trips: Trip[]): TripValidation {
       `Trips ${i + 1} and ${j + 1} overlap — overlapping days are counted once.`,
     );
   }
-  return { errors, warnings };
+  // List-level validation has no field attribution (the list has no inputs).
+  return { errors, warnings, fields: { entry: [], exit: [] } };
 }
 
 /** Normalise a trip for storage: trim the label, drop an empty label. */
