@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
     "SchengenCompass terms of use: a planning aid, not legal advice, with no guarantee of entry.",
-  alternates: { canonical: "https://schengencompass.com/terms/" },
+  alternates: { canonical: `${SITE_URL}/terms/` },
+  openGraph: { url: `${SITE_URL}/terms/` },
 };
 
 export default function TermsPage() {
