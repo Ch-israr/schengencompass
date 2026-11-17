@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { dayTimeline, evaluateStay, fromDayNumber, toDayNumber, todayIso } from "@/lib/schengen/engine";
+import { dayTimeline, evaluateStay, fromDayNumber, toDayNumber, todayLocalIso } from "@/lib/schengen/engine";
 import type { Trip } from "@/lib/schengen/types";
 import { buildShareUrl, copyToClipboard } from "@/lib/share/share-url";
 import { createTripStore } from "@/lib/storage/local-trips";
 import { decodePlan, encodePlan } from "@/lib/trips/serialise";
-import { validateTripList } from "@/lib/trips/validate";
+import { validatePlannedEntry, validateTripList } from "@/lib/trips/validate";
 import { ResultsPanel } from "./components/ResultsPanel";
 import { Timeline } from "./components/Timeline";
 import { TripForm } from "./components/TripForm";
@@ -99,12 +99,12 @@ export function Counter() {
       fromUrl.trips.length > 0 || fromUrl.entry !== null || fromUrl.stay !== null;
     if (hasUrlPlan) {
       setTrips(sortTrips(fromUrl.trips));
-      setEntry(fromUrl.entry ?? todayIso());
+      setEntry(fromUrl.entry ?? todayLocalIso());
       setStay(fromUrl.stay ?? 30);
     } else {
       setTrips(sortTrips(tripStore.load()));
       const storedPlan = readStoredPlan();
-      setEntry(storedPlan.entry ?? todayIso());
+      setEntry(storedPlan.entry ?? todayLocalIso());
       setStay(storedPlan.stay ?? 30);
     }
     setHydrated(true);
@@ -137,15 +137,16 @@ export function Counter() {
     [],
   );
 
-  const entryValid = useMemo(() => {
-    if (!entry) return false;
-    try {
-      toDayNumber(entry);
-      return true;
-    } catch {
-      return false;
-    }
+  // Planned entry must be a real date on or after today. "Today" is the
+  // user's LOCAL date (see todayLocalIso): native date inputs show local
+  // dates, so the UTC date would reject a valid local "today" in the
+  // early hours east of Greenwich.
+  const entryError = useMemo(() => {
+    if (!entry) return null;
+    return validatePlannedEntry(entry, todayLocalIso());
   }, [entry]);
+
+  const entryValid = entry !== "" && entryError === null;
 
   const stayValid = typeof stay === "number" && stay >= 1 && stay <= 365;
 
@@ -210,7 +211,7 @@ export function Counter() {
   };
 
   const loadExample = () => {
-    const today = todayIso();
+    const today = todayLocalIso();
     setTrips(exampleTrips(today));
     setEntry(today);
     setStay(21);
@@ -228,15 +229,19 @@ export function Counter() {
               type="date"
               value={entry}
               onChange={(event) => setEntry(event.target.value)}
-              aria-invalid={entry !== "" && !entryValid}
-              aria-describedby="planned-entry-hint"
+              aria-invalid={entryError !== null}
+              aria-describedby={
+                entryError
+                  ? "planned-entry-hint planned-entry-error"
+                  : "planned-entry-hint"
+              }
             />
             <span className="hint" id="planned-entry-hint">
               Entry date must be today or later.
             </span>
-            {entry !== "" && !entryValid ? (
-              <p className="field-error" role="alert">
-                Planned entry date is not a valid date.
+            {entryError ? (
+              <p className="field-error" id="planned-entry-error" role="alert">
+                {entryError}
               </p>
             ) : null}
           </div>
@@ -271,11 +276,6 @@ export function Counter() {
             ) : null}
           </div>
         </div>
-        <p>
-          Everything runs in your browser. Your trip dates are saved to local
-          storage on your own device for convenience and are never sent to a
-          server. You can clear them any time with Reset all.
-        </p>
       </section>
 
       <ResultsPanel
