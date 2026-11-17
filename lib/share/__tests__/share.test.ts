@@ -24,6 +24,24 @@ describe("buildShareUrl / parseShareUrl", () => {
     });
   });
 
+  it("round-trips a label containing underscores (F-22)", () => {
+    const trips = [
+      t("2026-01-01", "2026-01-05", "A_B"),
+      t("2026-02-01", "2026-02-05", "São Paulo, café & friends"),
+    ];
+    const url = buildShareUrl(
+      "https://schengencompass.pages.dev/schengen-calculator/",
+      trips,
+      "2026-11-16",
+      30,
+    );
+    expect(parseShareUrl(url)).toEqual({
+      trips,
+      entry: "2026-11-16",
+      stay: 30,
+    });
+  });
+
   it("returns the bare URL when the plan is empty", () => {
     expect(
       buildShareUrl("https://schengencompass.com/", [], null, null),
