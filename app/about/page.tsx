@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About",
   description:
-    "About SchengenCompass: a free, correct Schengen 90/180-day calculator and nomad visa directory.",
-  alternates: { canonical: "https://schengencompass.com/about/" },
+    "About SchengenCompass: a free, correct Schengen 90/180-day calculator.",
+  alternates: { canonical: `${SITE_URL}/about/` },
+  openGraph: { url: `${SITE_URL}/about/` },
 };
 
 export default function AboutPage() {
