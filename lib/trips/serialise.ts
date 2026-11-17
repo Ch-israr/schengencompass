@@ -7,6 +7,13 @@
  * third `_`-separated segment. Parsing never throws: malformed segments
  * are dropped, so a hand-edited or truncated URL degrades to fewer trips
  * instead of a broken page.
+ *
+ * Labels: `encodeURIComponent` does NOT escape `_`, and `_` is the segment
+ * separator — so a label containing `_` (e.g. "A_B") would split into
+ * extra segments on parse and the trip would be silently dropped. Labels
+ * are therefore encoded with `_` percent-encoded as `%5F` on serialise
+ * (`decodeURIComponent` reverses it on parse). Old URLs without labels,
+ * and old labels without `_`, parse exactly as before.
  */
 import { toDayNumber } from "../schengen/engine";
 import type { Trip } from "../schengen/types";
@@ -20,12 +27,17 @@ export interface PlanParams {
   stay: number | null;
 }
 
+/** Encode a trip label for a share URL. `_` is escaped explicitly (see header). */
+function encodeLabel(label: string): string {
+  return encodeURIComponent(label).replace(/_/g, "%5F");
+}
+
 export function serialiseTrips(trips: Trip[]): string {
   return trips
     .map(normaliseTrip)
     .map((trip) =>
       trip.label
-        ? `${trip.entry}_${trip.exit}_${encodeURIComponent(trip.label)}`
+        ? `${trip.entry}_${trip.exit}_${encodeLabel(trip.label)}`
         : `${trip.entry}_${trip.exit}`,
     )
     .join(",");
