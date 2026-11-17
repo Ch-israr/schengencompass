@@ -5,8 +5,8 @@ export function Footer() {
     <footer className="site-footer">
       <div className="container">
         <nav aria-label="Footer navigation">
-          <Link href="/">Calculator</Link>
-          <Link href="/schengen-calculator/">Schengen Calculator</Link>
+          {/* One Calculator link only, to the canonical counter URL. */}
+          <Link href="/schengen-calculator/">Calculator</Link>
           <Link href="/pro/">Pro</Link>
           <Link href="/about/">About</Link>
           <Link href="/privacy/">Privacy</Link>
