@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
 import { ProSignup } from "./ProSignup";
 
 export const metadata: Metadata = {
   title: "Pro — Unlimited Trips, PDF Reports, Overstay Alerts",
   description:
     "SchengenCompass Pro: unlimited saved trips, PDF reports, overstay email alerts, multi-passport support and re-entry planning. $49–$60 per year when it launches.",
-  alternates: { canonical: "https://schengencompass.com/pro/" },
+  alternates: { canonical: `${SITE_URL}/pro/` },
+  openGraph: { url: `${SITE_URL}/pro/` },
 };
 
 export default function ProPage() {
