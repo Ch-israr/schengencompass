@@ -38,6 +38,19 @@ export interface EarliestReentry {
   daysAvailable: number;
 }
 
+/**
+ * Re-entry outcome, as three distinct states. `null` used to conflate
+ * "available now" with "no date found within the scan", which hid real
+ * "no date found" cases from the UI — the two must never share a sentinel.
+ */
+export type EarliestReentryResult =
+  /** At least one day is already available on the entry date. */
+  | { status: "available" }
+  /** A re-entry date was found within the scan horizon. */
+  | ({ status: "found" } & EarliestReentry)
+  /** No date with a free day exists within the scan horizon. */
+  | { status: "not-found" };
+
 export interface StayResult {
   /** Days present in the 180-day window ending on the entry date. */
   daysUsed: number;
@@ -59,7 +72,9 @@ export interface StayResult {
   lastLegalDay: string | null;
   /**
    * First date on/after the entry date with at least one day available.
-   * Null when a day is already available on the entry date.
+   * Three distinct states — see `EarliestReentryResult`: "available"
+   * means a day is already free on the entry date, "found" carries the
+   * date, "not-found" means no free day exists within the scan horizon.
    */
-  earliestReentry: EarliestReentry | null;
+  earliestReentry: EarliestReentryResult;
 }
