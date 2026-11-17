@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "SchengenCompass privacy policy: your trip dates stay in your browser and are never sent to a server.",
-  alternates: { canonical: "https://schengencompass.com/privacy/" },
+  alternates: { canonical: `${SITE_URL}/privacy/` },
+  openGraph: { url: `${SITE_URL}/privacy/` },
 };
 
 export default function PrivacyPage() {
