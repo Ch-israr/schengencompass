@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { COUNTER_FAQ } from "@/data/faq";
 import { Counter } from "@/features/counter";
+import { EC_CALCULATOR_URL, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   // Absolute title: the layout template ("%s — SchengenCompass") is not
@@ -13,40 +14,29 @@ export const metadata: Metadata = {
   description:
     "Free Schengen 90/180-day calculator. Enter your past trips and a planned entry date to see days used, days remaining, your longest legal stay, and your earliest safe re-entry date.",
   alternates: {
-    canonical: "https://schengencompass.com/schengen-calculator/",
+    // Home canonicalizes to the calculator page (the primary counter URL).
+    canonical: `${SITE_URL}/schengen-calculator/`,
+  },
+  openGraph: {
+    url: `${SITE_URL}/schengen-calculator/`,
   },
 };
 
 function JsonLd() {
-  const faqPage = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: COUNTER_FAQ.map((entry) => ({
-      "@type": "Question",
-      name: entry.question,
-      acceptedAnswer: { "@type": "Answer", text: entry.answer },
-    })),
-  };
   const webApplication = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     name: "SchengenCompass",
-    url: "https://schengencompass.com/schengen-calculator/",
+    url: `${SITE_URL}/schengen-calculator/`,
     applicationCategory: "TravelApplication",
     operatingSystem: "Any",
     offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
   };
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplication) }}
-      />
-    </>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplication) }}
+    />
   );
 }
 
@@ -94,11 +84,6 @@ function Explainer() {
           are used, planned, or free.
         </li>
       </ul>
-      <p>
-        Everything runs in your browser. Your trip dates are saved to local
-        storage on your own device for convenience and are never sent to a
-        server. You can clear them any time with Reset all.
-      </p>
       <h3>Which countries count</h3>
       <p>
         The 90/180 count treats all 29 Schengen countries as one territory:
@@ -116,8 +101,15 @@ function Explainer() {
       </ol>
       <p className="disclaimer">
         Planning aid, not legal advice. Border officers make the final
-        decision. Verify the rule with the European Commission&apos;s official
-        Schengen calculator before you travel.
+        decision. Verify the rule with the{" "}
+        <a
+          href={EC_CALCULATOR_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          European Commission&apos;s official Schengen calculator
+        </a>{" "}
+        before you travel.
       </p>
     </section>
   );
@@ -131,7 +123,21 @@ function Faq() {
         {COUNTER_FAQ.map((entry) => (
           <details key={entry.question}>
             <summary>{entry.question}</summary>
-            <p>{entry.answer}</p>
+            <p>
+              {entry.answer}
+              {entry.link ? (
+                <>
+                  {" "}
+                  <a
+                    href={entry.link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {entry.link.label}
+                  </a>
+                </>
+              ) : null}
+            </p>
           </details>
         ))}
       </div>
