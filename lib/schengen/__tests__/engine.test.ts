@@ -20,6 +20,7 @@ import {
   evaluateStay,
   fromDayNumber,
   toDayNumber,
+  todayLocalIso,
 } from "../engine";
 import type { Trip } from "../types";
 
@@ -56,7 +57,7 @@ describe("verification contract — the 12 cases", () => {
     expect(r.maxStayFromEntry).toBe(90);
     expect(r.overstay).toBe(false);
     expect(r.lastLegalDay).toBe("2026-12-15");
-    expect(r.earliestReentry).toBeNull();
+    expect(r.earliestReentry).toEqual({ status: "available" });
   });
 
   it("2. One 30-day trip, entry 60 days later → 60 days remaining", () => {
@@ -81,7 +82,11 @@ describe("verification contract — the 12 cases", () => {
     expect(r.lastLegalDay).toBeNull();
     // Oldest trip day (2026-08-18) drops out of the window on 2027-02-14,
     // leaving 89 days used → 1 day available.
-    expect(r.earliestReentry).toEqual({ date: "2027-02-14", daysAvailable: 1 });
+    expect(r.earliestReentry).toEqual({
+      status: "found",
+      date: "2027-02-14",
+      daysAvailable: 1,
+    });
   });
 
   it("4. 91 days attempted → overstay flagged, last legal day shown", () => {
@@ -180,7 +185,11 @@ describe("verification contract — the 12 cases", () => {
     expect(r.lastLegalDay).toBeNull();
     // 31 trip days must drop out before the count falls below 90:
     // window starting 2026-08-19 leaves 89 days used.
-    expect(r.earliestReentry).toEqual({ date: "2027-02-14", daysAvailable: 1 });
+    expect(r.earliestReentry).toEqual({
+      status: "found",
+      date: "2027-02-14",
+      daysAvailable: 1,
+    });
   });
 
   it("12. Stay legal on entry but illegal mid-stay — last legal day shown", () => {
@@ -236,11 +245,20 @@ describe("edge cases", () => {
     expect(r.maxStayFromEntry).toBe(60);
   });
 
-  it("earliestReentryFrom returns null when a day is already available", () => {
-    expect(earliestReentryFrom([], "2026-11-16")).toBeNull();
+  it("earliestReentryFrom reports 'available' when a day is already free", () => {
+    expect(earliestReentryFrom([], "2026-11-16")).toEqual({
+      status: "available",
+    });
     expect(
       earliestReentryFrom([t("2026-01-01", "2026-01-30")], "2026-03-31"),
-    ).toBeNull();
+    ).toEqual({ status: "available" });
+  });
+
+  it("todayLocalIso uses the local calendar date, not UTC", () => {
+    // Local getters on a constructed date: 16 Nov 2026, 23:30 local.
+    // (In UTC this instant is 17 Nov — the point of the helper.)
+    expect(todayLocalIso(new Date(2026, 10, 16, 23, 30))).toBe("2026-11-16");
+    expect(todayLocalIso(new Date(2026, 0, 1, 0, 5))).toBe("2026-01-01");
   });
 
   it("evaluateStay is deterministic — same inputs, same outputs", () => {
@@ -281,5 +299,57 @@ describe("dayTimeline", () => {
     expect(byDate.get("2026-11-16")).toBe("used");
     expect(byDate.get("2026-11-17")).toBe("used");
     expect(byDate.get("2026-11-18")).toBe("planned");
+  });
+});
+
+describe("earliestReentry status (F-41)", () => {
+  it("a very long trip finds a re-entry date instead of reporting 'available'", () => {
+    // Verified case from the audit: the trip covers 883 days and the
+    // 180-day window is full (daysUsed 180). The old code returned null
+    // here — the same value as "a day is already available".
+    const r = evaluateStay(
+      [t("2026-01-01", "2028-06-01")],
+      "2028-06-01",
+      30,
+    );
+    expect(r.daysUsed).toBe(180);
+    expect(r.daysRemaining).toBe(0);
+    expect(r.earliestReentry).toEqual({
+      status: "found",
+      date: "2028-08-31",
+      daysAvailable: 1,
+    });
+  });
+
+  it("reports a re-entry date even when the entry day itself is counted (maxStay 1)", () => {
+    // 90 days in the window ending on the entry date: daysRemaining is 0
+    // but maxStay is 1, because the entry day (2026-11-16) is itself a
+    // used day and counts once. The panel must still show re-entry.
+    const r = evaluateStay(
+      [t("2026-08-19", "2026-11-16")],
+      "2026-11-16",
+      30,
+    );
+    expect(r.daysUsed).toBe(90);
+    expect(r.daysRemaining).toBe(0);
+    expect(r.maxStayFromEntry).toBe(1);
+    expect(r.earliestReentry).toEqual({
+      status: "found",
+      date: "2027-02-15",
+      daysAvailable: 1,
+    });
+  });
+
+  it("reports 'not-found' when no day frees up within the 5-year scan", () => {
+    // A 10-year trip that is still ongoing at the entry date and extends
+    // past the whole 1825-day scan: every window in the scan is fully
+    // covered, so no day frees up.
+    const r = evaluateStay(
+      [t("2026-01-01", "2036-01-01")],
+      "2030-06-01",
+      30,
+    );
+    expect(r.daysUsed).toBe(180);
+    expect(r.earliestReentry).toEqual({ status: "not-found" });
   });
 });
