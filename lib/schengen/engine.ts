@@ -17,7 +17,7 @@
  */
 import type {
   DayStatus,
-  EarliestReentry,
+  EarliestReentryResult,
   Exemption,
   StayResult,
   Trip,
@@ -62,6 +62,23 @@ export function fromDayNumber(dayNumber: number): string {
 /** Today's date as `YYYY-MM-DD` (UTC). Callers pass "today" in — the engine never reads the clock. */
 export function todayIso(): string {
   return fromDayNumber(Math.floor(Date.now() / DAY_MS));
+}
+
+/**
+ * Today's date as `YYYY-MM-DD` in the USER'S LOCAL timezone.
+ *
+ * Date arithmetic stays UTC (see `toDayNumber`), but UI date boundaries —
+ * "planned entry must be today or later", "a past trip must have ended" —
+ * must use the local calendar date, because native `<input type="date">`
+ * shows local dates. Using the UTC date would call yesterday "today" for
+ * users east of Greenwich between midnight and 04:00 local time.
+ * Accepts an injectable `now` so tests can pin the date.
+ */
+export function todayLocalIso(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 interface Range {
@@ -197,27 +214,42 @@ export function evaluateStay(
 
 /**
  * First date on/after `fromDate` on which at least one day is available.
- * Returns null when a day is already available on `fromDate` (no re-entry
- * wait needed) or when no such date is found within a year (only possible
- * with trips extending far into the future).
+ *
+ * Returns `{ status: "available" }` when a day is already free on
+ * `fromDate` (no re-entry wait needed), `{ status: "found", ... }` with
+ * the date, or `{ status: "not-found" }` when no free day exists within
+ * the scan horizon (only possible with trips extending years into the
+ * future). The three outcomes are distinct — callers must not treat
+ * "not-found" as "available".
+ *
+ * The scan covers 5 years (1,825 days): long enough that a trip spanning
+ * a year or two still resolves to a real date, while keeping the scan
+ * bounded. A trip covering more than ~5 years of continuous presence
+ * reports "not-found" instead of silently returning nothing.
  */
+export const REENTRY_SCAN_DAYS = 1825;
+
 export function earliestReentryFrom(
   trips: Trip[],
   fromDate: string,
   exemptions: Exemption[] = [],
-): EarliestReentry | null {
+): EarliestReentryResult {
   const fromDay = toDayNumber(fromDate);
   if (countDaysInWindow(trips, fromDate, exemptions) < SCHENGEN_LIMIT_DAYS) {
-    return null;
+    return { status: "available" };
   }
-  for (let offset = 1; offset <= 365; offset++) {
+  for (let offset = 1; offset <= REENTRY_SCAN_DAYS; offset++) {
     const candidate = fromDayNumber(fromDay + offset);
     const used = countDaysInWindow(trips, candidate, exemptions);
     if (used < SCHENGEN_LIMIT_DAYS) {
-      return { date: candidate, daysAvailable: SCHENGEN_LIMIT_DAYS - used };
+      return {
+        status: "found",
+        date: candidate,
+        daysAvailable: SCHENGEN_LIMIT_DAYS - used,
+      };
     }
   }
-  return null;
+  return { status: "not-found" };
 }
 
 /**
