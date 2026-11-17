@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact",
   description:
     "Contact SchengenCompass. Our business email address will be listed here soon.",
-  alternates: { canonical: "https://schengencompass.com/contact/" },
+  alternates: { canonical: `${SITE_URL}/contact/` },
+  openGraph: { url: `${SITE_URL}/contact/` },
 };
 
 export default function ContactPage() {
