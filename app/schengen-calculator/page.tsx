@@ -1,46 +1,35 @@
 import type { Metadata } from "next";
 import { COUNTER_FAQ } from "@/data/faq";
 import { Counter } from "@/features/counter";
+import { EC_CALCULATOR_URL, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Schengen Calculator — 90/180 Day Counter",
   description:
     "Free Schengen 90/180-day calculator. Enter your past trips and a planned entry date to see days used, days remaining, your longest legal stay, and your earliest safe re-entry date.",
   alternates: {
-    canonical: "https://schengencompass.com/schengen-calculator/",
+    canonical: `${SITE_URL}/schengen-calculator/`,
+  },
+  openGraph: {
+    url: `${SITE_URL}/schengen-calculator/`,
   },
 };
 
 function JsonLd() {
-  const faqPage = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: COUNTER_FAQ.map((entry) => ({
-      "@type": "Question",
-      name: entry.question,
-      acceptedAnswer: { "@type": "Answer", text: entry.answer },
-    })),
-  };
   const webApplication = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     name: "SchengenCompass",
-    url: "https://schengencompass.com/schengen-calculator/",
+    url: `${SITE_URL}/schengen-calculator/`,
     applicationCategory: "TravelApplication",
     operatingSystem: "Any",
     offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
   };
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplication) }}
-      />
-    </>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplication) }}
+    />
   );
 }
 
@@ -63,16 +52,55 @@ export default function SchengenCalculatorPage() {
           total is 90 or fewer, you are within the limit on that date. The
           window is rolling — it never resets on a calendar date.
         </p>
+        <h3>What this calculator does</h3>
+        <ul>
+          <li>
+            <strong>Days already used</strong> in the 180-day window ending
+            on your entry date, based on the past trips you enter.
+          </li>
+          <li>
+            <strong>Longest stay</strong> from your planned entry date,
+            checking every day of the trip against the 90-day limit — not
+            just the entry day.
+          </li>
+          <li>
+            <strong>Earliest re-entry date</strong> if you have no days left
+            — the first date the rolling window drops below 90, and how many
+            days you would have then.
+          </li>
+          <li>
+            <strong>A day-by-day timeline</strong> so you can see which dates
+            are used, planned, or free.
+          </li>
+        </ul>
+        <h3>Which countries count</h3>
         <p>
-          The 90/180 count treats all 29 Schengen countries as one territory:
-          25 EU member states plus Iceland, Liechtenstein, Norway and
-          Switzerland. Ireland and Cyprus remain outside Schengen, as does the
-          United Kingdom.
+          The 90/180 count treats all 29 Schengen countries as one
+          territory: 25 EU member states plus Iceland, Liechtenstein, Norway
+          and Switzerland. Bulgaria and Romania became full members on 1
+          January 2025. Ireland and Cyprus remain outside Schengen and apply
+          their own short-stay rules, so days spent there do not use the
+          shared Schengen allowance. Neither do days in the United Kingdom.
         </p>
+        <h3>How this works</h3>
+        <ol>
+          <li>
+            Each day in Schengen counts toward a rolling 180-day window.
+          </li>
+          <li>The legal maximum is 90 days in any 180-day period.</li>
+          <li>Use official border guidance for final decisions.</li>
+        </ol>
         <p className="disclaimer">
           Planning aid, not legal advice. Border officers make the final
-          decision. Verify the rule with the European Commission&apos;s
-          official Schengen calculator before you travel.
+          decision. Verify the rule with the{" "}
+          <a
+            href={EC_CALCULATOR_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            European Commission&apos;s official Schengen calculator
+          </a>{" "}
+          before you travel.
         </p>
       </section>
       <section aria-label="Frequently asked questions">
@@ -81,7 +109,21 @@ export default function SchengenCalculatorPage() {
           {COUNTER_FAQ.map((entry) => (
             <details key={entry.question}>
               <summary>{entry.question}</summary>
-              <p>{entry.answer}</p>
+              <p>
+                {entry.answer}
+                {entry.link ? (
+                  <>
+                    {" "}
+                    <a
+                      href={entry.link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {entry.link.label}
+                    </a>
+                  </>
+                ) : null}
+              </p>
             </details>
           ))}
         </div>
